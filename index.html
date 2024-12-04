@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Ứng Dụng Thời Tiết</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+        .weather-container {
+            background-color: rgba(255,255,255,0.9);
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 30px;
+            width: 350px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .search-box {
+            display: flex;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        #city-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 2px solid #764ba2;
+            border-radius: 5px 0 0 5px;
+            outline: none;
+        }
+        #search-btn, #location-btn {
+            background-color: #764ba2;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        #search-btn {
+            border-radius: 0 5px 5px 0;
+        }
+        #location-btn {
+            border-radius: 5px;
+            margin-left: 10px;
+        }
+        #search-btn:hover, #location-btn:hover {
+            background-color: #5d3d82;
+        }
+        #predictions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: white;
+            border: 1px solid #764ba2;
+            border-top: none;
+            z-index: 10;
+            display: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .prediction-item {
+            padding: 10px;
+            cursor: pointer;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .prediction-item:hover {
+            background-color: #f0f0f0;
+        }
+        #weather-info {
+            margin-top: 20px;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .loading, #initial-loading {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #764ba2;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #initial-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            z-index: 1000;
+        }
+        .error-message {
+            color: #d9534f;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+        }
+        .weather-icon {
+            font-size: 60px;
+            margin-bottom: 10px;
+            color: #764ba2;
+        }
+        .temperature {
+            font-size: 48px;
+            font-weight: bold;
+            color: #764ba2;
+        }
+        .weather-details {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+        .detail-item {
+            text-align: center;
+        }
+        .detail-icon {
+            font-size: 24px;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="initial-loading">
+        <div class="loading-spinner"></div>
+        <p style="color: white;">Đang tải ứng dụng...</p>
+    </div>
+
+    <div class="weather-container">
+        <div class="search-box">
+            <input type="text" id="city-input" placeholder="Nhập tên thành phố" autocomplete="off">
+            <button id="search-btn" onclick="getWeather()">
+                <i class="fas fa-search"></i>
+            </button>
+            <button id="location-btn" onclick="getCurrentLocation()">
+                <i class="fas fa-location-arrow"></i>
+            </button>
+            <div id="predictions"></div>
+        </div>
+        <div id="weather-info">
+            <p>Nhập tên thành phố hoặc sử dụng vị trí hiện tại để tra cứu thời tiết</p>
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = '1230a8fdc6457603234c68ead5f3f967';
+        const CITIES_API_KEY = '6c5e46dcd195446091d8795c53c4fda7';
+        const weatherIcons = {
+            '01d': 'fa-sun', '01n': 'fa-moon',
+            '02d': 'fa-cloud-sun', '02n': 'fa-cloud-moon',
+            '03d': 'fa-cloud', '03n': 'fa-cloud',
+            '04d': 'fa-cloud', '04n': 'fa-cloud',
+            '09d': 'fa-cloud-rain', '09n': 'fa-cloud-rain',
+            '10d': 'fa-cloud-sun-rain', '10n': 'fa-cloud-moon-rain',
+            '11d': 'fa-bolt', '11n': 'fa-bolt',
+            '13d': 'fa-snowflake', '13n': 'fa-snowflake',
+            '50d': 'fa-smog', '50n': 'fa-smog'
+        };
+
+        window.addEventListener('load', () => {
+            document.getElementById('initial-loading').style.display = 'none';
+        });
+
+        async function getCurrentLocation() {
+            const weatherInfo = document.getElementById('weather-info');
+            
+            if (!navigator.geolocation) {
+                showError('Trình duyệt của bạn không hỗ trợ định vị');
+                return;
+            }
+
+            weatherInfo.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Đang xác định vị trí...</p>
+                </div>
+            `;
+
+            try {
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject);
+                });
+
+                const { latitude, longitude } = position.coords;
+                await getWeatherByCoords(latitude, longitude);
+            } catch (error) {
+                if (error.code === 1) {
+                    showError('Vui lòng cho phép truy cập vị trí để sử dụng tính năng này');
+                } else if (error.code === 2) {
+                    showError('Không thể xác định vị trí. Vui lòng thử lại');
+                } else {
+                    showError('Đã có lỗi xảy ra khi xác định vị trí');
+                }
+            }
+        }
+
+        async function getWeatherByCoords(lat, lon) {
+            const weatherInfo = document.getElementById('weather-info');
+
+            try {
+                const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric&lang=vi`);
+                
+                if (!response.ok) {
+                    throw new Error('Đã có lỗi xảy ra khi lấy thông tin thời tiết');
+                }
+
+                const data = await response.json();
+                updateWeatherDisplay(data);
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        async function getWeather() {
+            const cityInput = document.getElementById('city-input');
+            const weatherInfo = document.getElementById('weather-info');
+            const city = cityInput.value.trim();
+
+            if (!city) {
+                showError('Vui lòng nhập tên thành phố');
+                return;
+            }
+
+            const specialCharRegex = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?0-9]/;
+            if (specialCharRegex.test(city)) {
+                showError('Tên thành phố không được chứa ký tự đặc biệt hoặc số');
+                return;
+            }
+
+            weatherInfo.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Đang tìm kiếm thông tin thời tiết...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric&lang=vi`);
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error(`Không tìm thấy thành phố "${city}". Vui lòng kiểm tra lại tên.`);
+                    } else if (response.status === 401) {
+                        throw new Error('Lỗi xác thực API. Vui lòng thử lại sau.');
+                    } else {
+                        throw new Error('Đã có lỗi xảy ra. Vui lòng thử lại.');
+                    }
+                }
+
+                const data = await response.json();
+                updateWeatherDisplay(data);
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function updateWeatherDisplay(data) {
+            const weatherInfo = document.getElementById('weather-info');
+            const iconCode = data.weather[0].icon;
+
+            weatherInfo.innerHTML = `
+                <i class="fas ${weatherIcons[iconCode]} weather-icon"></i>
+                <div class="temperature">${Math.round(data.main.temp)}°C</div>
+                <h2>${data.name}, ${data.sys.country}</h2>
+                <p>${data.weather[0].description}</p>
+                <div class="weather-details">
+                    <div class="detail-item">
+                        <i class="fas fa-tint detail-icon"></i>
+                        <div>Độ ẩm</div>
+                        <div>${data.main.humidity}%</div>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-wind detail-icon"></i>
+                        <div>Gió</div>
+                        <div>${data.wind.speed} m/s</div>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-temperature-low detail-icon"></i>
+                        <div>Cảm giác</div>
+                        <div>${Math.round(data.main.feels_like)}°C</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            const weatherInfo = document.getElementById('weather-info');
+            weatherInfo.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        // City Prediction Functionality
+        const cityInput = document.getElementById('city-input');
+        const predictionsContainer = document.getElementById('predictions');
+
+        cityInput.addEventListener('input', async function() {
+            const cityName = this.value.trim();
+            
+            if (cityName.length < 2) {
+                predictionsContainer.innerHTML = '';
+                predictionsContainer.style.display = 'none';
+                return;
+            }
+
+            try {
+                const response = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${cityName}&key=${CITIES_API_KEY}&limit=5&language=vi`);
+                const data = await response.json();
+
+                if (data.results && data.results.length > 0) {
+                    predictionsContainer.innerHTML = '';
+                    data.results.slice(0, 5).forEach(result => {
+                        const predictionItem = document.createElement('div');
+                        predictionItem.classList.add('prediction-item');
+                        predictionItem.textContent = `${result.formatted}`;
+                        predictionItem.addEventListener('click', () => {
+                            const cityComponents = result.formatted.split(',');
+                            cityInput.value = cityComponents[0].trim();
+                            predictionsContainer.style.display = 'none';
+                            getWeather();
+                        });
+                        predictionsContainer.appendChild(predictionItem);
+                    });
+                    predictionsContainer.style.display = 'block';
+                } else {
+                    predictionsContainer.innerHTML = '';
+                    predictionsContainer.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Lỗi dự đoán thành phố:', error);
+                predictionsContainer.innerHTML = '';
+                predictionsContainer.style.display = 'none';
+            }
+        });
+
+        document.addEventListener('click', function(event) {
+            if (!cityInput.contains(event.target) && !predictionsContainer.contains(event.target)) {
+                predictionsContainer.style.display = 'none';
+            }
+        });
+
+        cityInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                getWeather();
+            }
+        });
+    </script>
+</body>
+</html>
