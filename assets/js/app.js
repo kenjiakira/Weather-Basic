@@ -1,4 +1,4 @@
-const API_KEY = '1230a8fdc6457603234c68ead5f3f967'; //APIKEY
+const API_KEY = '1230a8fdc6457603234c68ead5f3f967'; 
 const RANDOM_CITIES = ['London', 'Tokyo', 'New York', 'Paris', 'Sydney', 'Dubai', 'Singapore', 'Moscow'];
 
 async function getRandomWeather() {
@@ -13,7 +13,6 @@ async function getRandomWeather() {
         console.error('Error fetching random weather:', error);
     }
 }
-// Kiểm tra xem Web có hỗ trợ vị trí hay không
 function getCurrentLocation() {
     if (navigator.geolocation) {
         document.getElementById('loading').style.display = 'block';
@@ -30,7 +29,6 @@ function getCurrentLocation() {
         alert('Geolocation is not supported by your browser');
     }
 }
-//phần API
 async function getWeatherByCoords(lat, lon) {
     try {
         const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`);

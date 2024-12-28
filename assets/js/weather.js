@@ -1,4 +1,4 @@
-// Temperature conversion functions
+
 function celsiusToFahrenheit(celsius) {
     return (celsius * 9/5) + 32;
 }
@@ -11,7 +11,7 @@ function formatTemperature(celsius) {
 }
 
 function updateTemperatureDisplay() {
-    // Update current temperature
+    
     const tempElement = document.getElementById('temperature');
     const currentTemp = parseFloat(tempElement.textContent);
     if (!isNaN(currentTemp)) {
@@ -20,7 +20,6 @@ function updateTemperatureDisplay() {
         tempElement.textContent = formatTemperature(celsius);
     }
 
-    // Update forecast temperatures
     const forecastDays = document.querySelectorAll('.forecast-day');
     forecastDays.forEach(day => {
         const tempText = day.querySelector('div:nth-child(3)').textContent;

@@ -1,4 +1,4 @@
-// Settings management
+
 class Settings {
     constructor() {
         this.settings = this.loadSettings();
@@ -18,14 +18,12 @@ class Settings {
     }
 
     init() {
-        // Initialize toggles
+    
         document.getElementById('unitToggle').checked = this.settings.unit === 'F';
         document.getElementById('darkModeToggle').checked = this.settings.darkMode;
 
-        // Apply initial settings
         this.applyDarkMode(this.settings.darkMode);
 
-        // Add event listeners
         document.getElementById('unitToggle').addEventListener('change', (e) => {
             this.settings.unit = e.target.checked ? 'F' : 'C';
             this.saveSettings();
@@ -48,7 +46,6 @@ class Settings {
     }
 }
 
-// Settings modal management
 function toggleSettings() {
     const modal = document.getElementById('settingsModal');
     if (modal.style.display === 'flex') {
@@ -58,5 +55,4 @@ function toggleSettings() {
     }
 }
 
-// Initialize settings
 const settingsManager = new Settings();
