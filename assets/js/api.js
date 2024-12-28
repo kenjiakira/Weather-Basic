@@ -1,4 +1,4 @@
-const API_KEY = '1230a8fdc6457603234c68ead5f3f967';
+const API_KEY = process.env.OPENWEATHER_API_KEY || '1230a8fdc6457603234c68ead5f3f967';
 const RANDOM_CITIES = ['London', 'Tokyo', 'New York', 'Paris', 'Sydney', 'Dubai', 'Singapore', 'Moscow'];
 
 async function fetchWeatherData(url) {
@@ -21,5 +21,5 @@ async function getWeatherByCoords(lat, lon) {
 }
 
 async function getForecastData(lat, lon) {
-    return fetchWeatherData(`https://api.openweathermap.org/data/2.5/onecall?lat=${lat}&lon=${lon}&exclude=current,minutely,hourly&appid=${API_KEY}&units=metric`);
+    return fetchWeatherData(`https://api.openweathermap.org/data/2.5/onecall?lat=${lat}&lon=${lat}&exclude=current,minutely,hourly&appid=${API_KEY}&units=metric`);
 }
